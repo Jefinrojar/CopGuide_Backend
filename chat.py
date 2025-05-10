@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
@@ -7,6 +8,12 @@ from langchain.prompts import PromptTemplate
 import google.generativeai as genai
 
 app = Flask(__name__)
+
+# Enable CORS for all origins (not recommended for production)
+CORS(app)
+
+# If you want to restrict CORS to specific origins, you can do:
+# CORS(app, resources={r"/search": {"origins": "http://localhost:5173"}})
 
 # Load environment variables (assuming GOOGLE_API_KEY is set in environment)
 GOOGLE_API_KEY = "AIzaSyCCTW2ZY8D9hrYrAqrDeVCZzcSrsjYanN8"
