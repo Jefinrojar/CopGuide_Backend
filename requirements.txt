@@ -1,0 +1,11 @@
+flask
+flask-cors
+sentence-transformers
+numpy
+faiss-cpu
+pandas
+googletrans==4.0.0-rc1
+chardet
+pymongo
+werkzeug
+scikit-learn
