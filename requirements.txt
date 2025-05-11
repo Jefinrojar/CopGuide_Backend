@@ -9,3 +9,5 @@ chardet
 pymongo
 werkzeug
 scikit-learn
+langchain_google_genai
+langchain_community
