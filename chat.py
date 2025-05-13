@@ -25,21 +25,21 @@ if not GOOGLE_API_KEY:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# PostgreSQL connection pool
-POSTGRES_CONFIG = {
-    "dbname": os.getenv("DB_NAME", "feedback_db"),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", "123456789"),
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": os.getenv("DB_PORT", "5432")
-}
+# Database connection string
+# Prefer environment variable for security; fallback to provided string
+DB_CREDENTIALS = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:CopGuide%40123@db.exmjgsixqxuvejkgquco.supabase.co:5432/postgres"
+)
 
+# PostgreSQL connection pool using connection string
 try:
     connection_pool = psycopg2.pool.SimpleConnectionPool(
         minconn=1,
         maxconn=20,
-        **POSTGRES_CONFIG
+        dsn=DB_CREDENTIALS
     )
+    logger.info("PostgreSQL connection pool initialized successfully.")
 except Exception as e:
     logger.error(f"Error connecting to PostgreSQL: {e}")
     raise
