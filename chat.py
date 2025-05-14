@@ -10,6 +10,7 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 import google.generativeai as genai
 import logging
+from auth import register_auth_routes  # Import authentication routes
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,13 +27,12 @@ if not GOOGLE_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # Database connection string
-# Prefer environment variable for security; fallback to provided string
 DB_CREDENTIALS = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:CopGuide%40123@db.exmjgsixqxuvejkgquco.supabase.co:5432/postgres"
 )
 
-# PostgreSQL connection pool using connection string
+# PostgreSQL connection pool
 try:
     connection_pool = psycopg2.pool.SimpleConnectionPool(
         minconn=1,
@@ -44,7 +44,7 @@ except Exception as e:
     logger.error(f"Error connecting to PostgreSQL: {e}")
     raise
 
-# Initialize PostgreSQL database tables
+# Initialize feedback and Q-table (no user table here)
 def init_db():
     conn = connection_pool.getconn()
     try:
@@ -76,6 +76,9 @@ def init_db():
 
 init_db()
 
+# Register authentication routes
+register_auth_routes(app, connection_pool)
+
 # Load the vector store
 VECTOR_STORE_DIR = './vector_store/'
 try:
@@ -89,9 +92,9 @@ except Exception as e:
     raise
 
 # RL parameters
-ALPHA = 0.2  # Learning rate
-GAMMA = 0.9  # Discount factor (unused in simplified formula)
-EPSILON = 0.05  # Exploration rate
+ALPHA = 0.2
+GAMMA = 0.9
+EPSILON = 0.05
 
 # Function to hash questions for Q-table
 def hash_question(question):
@@ -130,7 +133,7 @@ def get_q_value(question, doc_index):
 def update_q_value(question, doc_index, reward):
     question_hash = hash_question(question)
     current_q = get_q_value(question, doc_index)
-    new_q = current_q + ALPHA * (reward - current_q)  # Simplified formula
+    new_q = current_q + ALPHA * (reward - current_q)
     conn = connection_pool.getconn()
     try:
         with conn.cursor() as cursor:
@@ -148,7 +151,7 @@ def update_q_value(question, doc_index, reward):
     finally:
         connection_pool.putconn(conn)
 
-# Function to create conversational chain with enhanced prompt
+# Function to create conversational chain
 def get_conversational_chain():
     prompt_template = """
     You are a highly knowledgeable and precise assistant specializing in legal and governmental queries. Your goal is to provide accurate, concise, and professional answers based solely on the provided context. Follow these steps:
@@ -186,11 +189,11 @@ def process_query(user_question):
         docs = vector_store.similarity_search(user_question, k=2)
         logger.info(f"Retrieved documents for '{user_question}': {[doc.page_content[:100] for doc in docs]}")
         if np.random.rand() < EPSILON:
-            selected_doc_index = int(np.random.randint(len(docs)))  # Convert to int
+            selected_doc_index = int(np.random.randint(len(docs)))
             logger.info(f"Exploration: Selected doc_index={selected_doc_index}")
         else:
             q_values = [get_q_value(user_question, i) for i in range(len(docs))]
-            selected_doc_index = int(np.argmax(q_values))  # Convert to int
+            selected_doc_index = int(np.argmax(q_values))
             logger.info(f"Exploitation: Selected doc_index={selected_doc_index}, q_values={q_values}")
         
         selected_docs = [docs[selected_doc_index]]
@@ -216,7 +219,7 @@ def process_query(user_question):
         finally:
             connection_pool.putconn(conn)
         
-        return response_text, int(feedback_id), int(selected_doc_index)  # Convert to int
+        return response_text, int(feedback_id), int(selected_doc_index)
     except Exception as e:
         logger.error(f"Error processing question: {e}")
         return "Error processing question.", None, None
@@ -236,8 +239,8 @@ def search():
         response, feedback_id, doc_index = process_query(question)
         return jsonify({
             'answer': response,
-            'feedback_id': int(feedback_id) if feedback_id is not None else None,  # Convert to int
-            'doc_index': int(doc_index) if doc_index is not None else None  # Convert to int
+            'feedback_id': int(feedback_id) if feedback_id is not None else None,
+            'doc_index': int(doc_index) if doc_index is not None else None
         }), 200
     except Exception as e:
         logger.error(f"Error in search endpoint: {e}")
@@ -306,7 +309,7 @@ def get_qvalues():
             response = {
                 'question': question,
                 'q_values': sorted(
-                    [{'doc_index': int(row[0]), 'q_value': float(row[1])} for row in q_values],  # Convert to int/float
+                    [{'doc_index': int(row[0]), 'q_value': float(row[1])} for row in q_values],
                     key=lambda x: x['q_value'],
                     reverse=True
                 )
