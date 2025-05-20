@@ -29,7 +29,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 # Database connection string
 DB_CREDENTIALS = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:CopGuide%40123@db.exmjgsixqxuvejkgquco.supabase.co:5432/postgres"
+    "postgresql://copguidedb_user:T3taIXpN797Gp3JQKoblnN0LlpYjeeDa@dpg-d0m9nnfdiees73dprrv0-a.oregon-postgres.render.com/copguidedb"
 )
 
 # PostgreSQL connection pool
